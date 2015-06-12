@@ -1,0 +1,14 @@
+{
+  "name": "wallboard",
+  "version": "0.0.0",
+  "authors": [
+    "Risto Yrjänä <risto@vaadin.com>",
+    "Guillermo Alvarez <guillermo@vaadin.com>"
+  ],
+  "license": "Apache-2.0",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components"
+  ]
+}
