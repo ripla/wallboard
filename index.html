@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, minimum-scale=1.0, initial-scale=1.0, user-scalable=yes">
+    <title>Pro Tools Wallboard</title>
+
+    <script src="../webcomponentsjs/webcomponents-lite.min.js"></script>
+    <link rel="import" href="configuration-element.html">
+    <link rel="import" href="pages/jira-sprint-progress.html">
+
+    <style>
+        body {
+            background-color: black;
+        }
+    </style>
+</head>
+<body>
+
+<template id="wallboard" is="dom-bind">
+    <configuration-element></configuration-element>
+    <jira-sprint-progress jiraBase="[[jiraBase]]"></jira-sprint-progress>
+</template>
+</body>
+</html>
