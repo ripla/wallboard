@@ -1,0 +1,155 @@
+<link rel="import" href="../../polymer/polymer.html">
+
+<link rel="import" href="../../iron-ajax/iron-ajax.html">
+<link rel="import" href="../../vaadin-charts/v-chart.html">
+
+<dom-module id="jira-sprint-issues">
+    <template>
+        <iron-meta id="conf"></iron-meta>
+
+        <iron-ajax id="currentSprint"
+                   auto
+                   url="[[activeSprintQueryUrl]]"
+                   headers='{"Accept": "application/json", "Content-Type": "application/json"}'
+                   handle-as="json"
+                   on-response="_handleCurrentSprintQuery"
+                   on-error="_handleCurrentSprintQueryError"></iron-ajax>
+
+        <iron-ajax id="sprintStats"
+                   auto
+                   url="[[sprintReportQueryUrl]]"
+                   headers='{"Accept": "application/json", "Content-Type": "application/json"}'
+                   handle-as="json"
+                   on-response="_handleSprintStatsQuery"></iron-ajax>
+
+       <vaadin-grid id="grid">
+
+       </vaadin-grid>
+    </template>
+
+    <script>
+        Polymer({
+            is: 'jira-sprint-progress',
+
+            properties: {
+                jiraBase: {
+                    type: String,
+                    observer: '_baseChanged'
+                },
+
+                activeSprintQueryUrl: {
+                    type: String,
+                    computed: '_computeActiveSprintURL(jiraBase)'
+                },
+
+                sprintReportQueryUrl: {
+                    type: String,
+                    computed: '_computeSprintReportURL(jiraBase, currentSprintId)'
+                },
+
+                currentSprintId: Number
+
+            },
+
+            ready: function () {
+                this.jiraBase = this.$.conf.byKey('jiraBase');
+            },
+
+            _baseChanged: function (newValue) {
+                console.log(newValue);
+            },
+
+            _computeSprintReportURL: function (jiraBase, currentSprintId) {
+                return jiraBase + '/rest/greenhopper/1.0/rapid/charts/sprintreport?rapidViewId=4&sprintId=' + currentSprintId;
+            },
+
+            _computeActiveSprintURL: function (jiraBase) {
+                return jiraBase + "/rest/greenhopper/1.0/sprintquery/4";
+            },
+
+            _handleSprintContents: function (response) {
+                if (response !== null && response.contents) {
+                    var completedIssues = response.contents.completedIssues.length;
+                    var incompletedIssues = response.contents.incompletedIssues.length;
+
+                    if (completedIssues > 0) {
+                        this.$.sprintChart.chart.addSeries({
+                            color: this.doneColor,
+                            name: "Done",
+                            data: [completedIssues]
+                        }, false, false);
+                    }
+
+                    if (incompletedIssues > 0) {
+                        var toDoCount = this._calculateIssues(response.contents.incompletedIssues, 10000);
+                        var inProgressCount = this._calculateIssues(response.contents.incompletedIssues, 3);
+                        var inReviewCount = this._calculateIssues(response.contents.incompletedIssues, 10100);
+
+                        if (inReviewCount > 0) {
+                            this.$.sprintChart.chart.addSeries({
+                                color: this.inReviewColor,
+                                name: "In Review",
+                                data: [inReviewCount]
+                            }, false, false);
+                        }
+
+                        if (inProgressCount > 0) {
+                            this.$.sprintChart.chart.addSeries({
+                                color: this.inProgressColor,
+                                name: "In Progress",
+                                data: [inProgressCount]
+                            }, false, false);
+                        }
+
+                        if (toDoCount > 0) {
+                            this.$.sprintChart.chart.addSeries({
+                                color: this.toDoColor,
+                                name: "To Do",
+                                data: [toDoCount]
+                            }, false, false);
+                        }
+                    }
+                    this.$.sprintChart.chart.redraw();
+                }
+            },
+
+            _handleSprintStatsQuery: function (event) {
+                console.log("Handling response " + JSON.stringify(event.detail.response));
+                var response = event.detail.response;
+                this._handleSprintContents(response);
+            },
+
+            _calculateIssues: function (issueArray, status) {
+                var count = 0;
+
+                for (var i = 0; i < issueArray.length; i++) {
+                    var issue = issueArray[i];
+                    if (issue.statusId == status) {
+                        count++;
+                    }
+                }
+
+                return count;
+            },
+
+            _handleCurrentSprintQuery: function (event) {
+                console.log("Handling response " + event);
+
+                if (event.detail.response !== null && event.detail.response.sprints) {
+                    var body = event.detail.response;
+                    for (sprint in body.sprints) {
+                        var value = body.sprints[sprint];
+                        if ("ACTIVE" === value.state) {
+                            this.currentSprintId = value.id;
+                        }
+                    }
+                }
+            },
+
+            _handleCurrentSprintQueryError: function (event) {
+                console.log('Error fetching current sprint: ' + JSON.stringify(event));
+            }
+        })
+        ;
+    </script>
+</dom-module>

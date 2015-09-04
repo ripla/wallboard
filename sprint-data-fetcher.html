@@ -1,0 +1,102 @@
+<link rel="import" href="../../polymer/polymer.html">
+
+<link rel="import" href="../../iron-ajax/iron-ajax.html">
+<link rel="import" href="../../vaadin-charts/v-chart.html">
+
+<dom-module id="sprint-data-fetcher">
+    <template>
+        <iron-meta id="conf"></iron-meta>
+
+        <iron-ajax id="currentSprint"
+                   url="[[_activeSprintQueryUrl]]"
+                   headers='{"Accept": "application/json", "Content-Type": "application/json"}'
+                   handle-as="json"
+                   on-response="_handleCurrentSprintQuery"
+                   on-error="_handleCurrentSprintQueryError"></iron-ajax>
+
+        <iron-ajax id="sprintStats"
+                   auto
+                   url="[[_sprintReportQueryUrl]]"
+                   headers='{"Accept": "application/json", "Content-Type": "application/json"}'
+                   handle-as="json"
+                   on-response="_handleSprintStatsQuery"></iron-ajax>
+    </template>
+
+    <script>
+        Polymer({
+            is: 'sprint-data-fetcher',
+
+            properties: {
+
+                sprintJson: {
+                    type: Object,
+                    notify: true
+                },
+
+                _jiraBase: {
+                    type: String
+                },
+
+                _activeSprintQueryUrl: {
+                    type: String,
+                    notify: true,
+                    computed: '_computeActiveSprintURL(jiraBase)'
+                },
+
+                _sprintReportQueryUrl: {
+                    type: String,
+                    notify: true,
+                    computed: '_computeSprintReportURL(jiraBase, currentSprintId)'
+                },
+
+                _currentSprintId: Number
+
+            },
+
+            ready: function () {
+                this.jiraBase = this.$.conf.byKey('jiraBase');
+                this.$.currentSprint.generateRequest();
+            },
+
+            _computeSprintReportURL: function (jiraBase, currentSprintId) {
+                return jiraBase + '/rest/greenhopper/1.0/rapid/charts/sprintreport?rapidViewId=4&sprintId=' + currentSprintId;
+            },
+
+            _computeActiveSprintURL: function (jiraBase) {
+                return jiraBase + "/rest/greenhopper/1.0/sprintquery/4";
+            },
+
+            _handleSprintContents: function (response) {
+
+            },
+
+            _handleSprintStatsQuery: function (event) {
+                console.log("Handling response " + event);
+                var response = event.detail.response;
+
+                if (response !== null && response.contents) {
+                    this.sprintJson = response.contents;
+                }
+            },
+
+            _handleCurrentSprintQuery: function (event) {
+                console.log("Handling response " + event);
+
+                if (event.detail.response !== null && event.detail.response.sprints) {
+                    var body = event.detail.response;
+                    for (sprint in body.sprints) {
+                        var value = body.sprints[sprint];
+                        if ("ACTIVE" === value.state) {
+                            this.currentSprintId = value.id;
+                        }
+                    }
+                }
+            },
+
+            _handleCurrentSprintQueryError: function (event) {
+                console.log('Error fetching current sprint: ' + JSON.stringify(event));
+            }
+        })
+        ;
+    </script>
+</dom-module>
